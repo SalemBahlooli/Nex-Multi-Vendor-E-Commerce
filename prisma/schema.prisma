@@ -1,0 +1,166 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// prisma/schema.prisma
+datasource db {
+  provider  = "postgresql"
+  url  	    = env("DATABASE_URL")
+  // uncomment next line if you use Prisma <5.10
+  // directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+  email     String   @unique
+  password  String
+  reviews   Review[]
+  orders    Order[]
+  vendor    Vendor?
+
+  @@unique([id])
+  @@index([id])
+}
+
+model Vendor {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  name        String
+  description String?
+  image       String
+  rate        Float?
+  vendorPercentage Float?   @default(30.0) // Default 30% platform fee
+  products    Product[]
+  phone       String?
+  address     String?
+  earnings    VendorEarning[]
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @unique
+  @@unique([id])
+  @@index([id])
+}
+
+model Product {
+  id                    String         @id @default(uuid())
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  name                  String
+  description           String?
+  price                 Float
+  discountPercentage    Float?         
+  vendor                Vendor         @relation(fields: [vendorId], references: [id])
+  vendorId              String
+  status                Status         @default(PENDING)
+  purchaseCount         Int            @default(0)
+  rate                  Float          @default(0.0)
+  colors                Color[]
+  sizes                 Size[]
+  categories            Category[]     // Changed to many-to-many
+  stock                 Int            @default(0)
+  sku                   String         @unique
+  lightDesignImage      String?
+  darkDesignImage       String?
+  images                Image[]
+  reviews               Review[]
+  orderItems            OrderItem[]
+  vendorEarnings        VendorEarning[]
+  @@unique([id])
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  products    Product[] // Changed to many-to-many
+}
+
+
+model VendorEarning {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
+  vendorId  String
+  amount    Float
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rating    Int
+  comment   String?
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+}
+
+model Color {
+  id       String    @id @default(uuid())
+  name     String
+  hexCode  String
+  isLight  Boolean    @default(true)
+  tshirtImage String
+  products Product[]
+}
+
+model Size {
+  id       String    @id @default(uuid())
+  name     String
+  products Product[]
+}
+
+model Image {
+  id        String  @id @default(uuid())
+  url       String
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+}
+
+model Order {
+  id             String         @id @default(uuid())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  user           User           @relation(fields: [userId], references: [id])
+  userId         String
+  status         OrderStatus    @default(PENDING)
+  total          Float
+  items          OrderItem[]
+  vendorEarnings VendorEarning[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  order     Order   @relation(fields: [orderId], references: [id])
+  orderId   String
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  quantity  Int
+  price     Float
+}
+
+enum Status {
+  PUBLISHED
+  PENDING
+  SUSPENDED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
